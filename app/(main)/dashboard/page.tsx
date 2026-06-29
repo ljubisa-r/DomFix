@@ -1,51 +1,28 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import StatusBedz from "@/components/StatusBedz";
 
-interface Korisnik {
-  id: string;
-  ime: string;
-  email: string;
-  uloga: string;
-}
+export default async function DashboardStrana() {
+  const korisnik = await getCurrentUser();
+  if (!korisnik) redirect("/prijava");
 
-interface Zahtev {
-  id: string;
-  opis: string;
-  status: string;
-  kreiranAt: string;
-  kategorija: { ime: string };
-  klijent: { ime: string; email: string };
-  majstor: { ime: string; email: string };
-  recenzija: object | null;
-}
-
-export default function DashboardStrana() {
-  const [korisnik, setKorisnik] = useState<Korisnik | null>(null);
-  const [zahtevi, setZahtevi] = useState<Zahtev[]>([]);
-  const [ucitava, setUcitava] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.korisnik) { router.push("/prijava"); return; }
-        setKorisnik(d.korisnik);
-      });
-
-    fetch("/api/zahtevi")
-      .then((r) => r.json())
-      .then((d) => {
-        setZahtevi(d.zahtevi ?? []);
-        setUcitava(false);
-      });
-  }, [router]);
-
-  if (!korisnik) return <div className="py-16 text-center text-gray-400">Učitava se...</div>;
+  const zahtevi = await prisma.zahtev.findMany({
+    where:
+      korisnik.uloga === "KLIJENT"
+        ? { klijentId: korisnik.id }
+        : korisnik.uloga === "MAJSTOR"
+          ? { majstorId: korisnik.id }
+          : {},
+    include: {
+      klijent: { select: { id: true, ime: true, email: true } },
+      majstor: { select: { id: true, ime: true, email: true } },
+      kategorija: true,
+      recenzija: true,
+    },
+    orderBy: { kreiranAt: "desc" },
+  });
 
   const statistika = {
     ukupno: zahtevi.length,
@@ -85,7 +62,7 @@ export default function DashboardStrana() {
         {korisnik.uloga === "KLIJENT" && (
           <Link
             href="/majstori"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium transition-colors"
           >
             Traži majstora
           </Link>
@@ -93,14 +70,14 @@ export default function DashboardStrana() {
         {korisnik.uloga === "ADMIN" && (
           <Link
             href="/admin"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium transition-colors"
           >
             Admin panel
           </Link>
         )}
         <Link
           href="/profil"
-          className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2.5 rounded-lg font-medium transition-colors"
+          className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-3 rounded-lg font-medium transition-colors"
         >
           Moj profil
         </Link>
@@ -114,11 +91,9 @@ export default function DashboardStrana() {
           </h2>
         </div>
 
-        {ucitava ? (
-          <div className="text-center py-12 text-gray-400">Učitava se...</div>
-        ) : zahtevi.length === 0 ? (
+        {zahtevi.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-4xl mb-3">📋</div>
+            <div className="text-4xl mb-3" aria-hidden="true">📋</div>
             <p className="text-gray-500">Nemate nijedan zahtev</p>
             {korisnik.uloga === "KLIJENT" && (
               <Link href="/majstori" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
@@ -142,13 +117,13 @@ export default function DashboardStrana() {
                     <StatusBedz status={z.status} />
                   </div>
                   <p className="text-sm text-gray-500 truncate mb-1">{z.opis}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {korisnik.uloga === "MAJSTOR" ? `Klijent: ${z.klijent.ime}` : `Majstor: ${z.majstor.ime}`}
                     {" · "}
-                    {new Date(z.kreiranAt).toLocaleDateString("sr-RS")}
+                    {z.kreiranAt.toLocaleDateString("sr-RS")}
                   </p>
                 </div>
-                <div className="text-gray-400 text-sm">→</div>
+                <div className="text-gray-500 text-sm" aria-hidden="true">→</div>
               </Link>
             ))}
           </div>

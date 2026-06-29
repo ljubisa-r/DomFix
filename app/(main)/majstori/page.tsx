@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
 
 interface Kategorija {
@@ -20,11 +21,20 @@ interface Majstor {
 }
 
 export default function MajstoriStrana() {
+  return (
+    <Suspense>
+      <MajstoriSadrzaj />
+    </Suspense>
+  );
+}
+
+function MajstoriSadrzaj() {
+  const searchParams = useSearchParams();
   const [majstori, setMajstori] = useState<Majstor[]>([]);
   const [kategorije, setKategorije] = useState<Kategorija[]>([]);
-  const [pretraga, setPretraga] = useState("");
-  const [odabranaKat, setOdabranaKat] = useState("");
-  const [lokacija, setLokacija] = useState("");
+  const [pretraga, setPretraga] = useState(searchParams.get("pretraga") ?? "");
+  const [odabranaKat, setOdabranaKat] = useState(searchParams.get("kategorija") ?? "");
+  const [lokacija, setLokacija] = useState(searchParams.get("lokacija") ?? "");
   const [ucitava, setUcitava] = useState(false);
 
   useEffect(() => {

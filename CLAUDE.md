@@ -28,3 +28,11 @@
 
 \- Prefer server components when possible.
 
+
+
+\## Design Context
+
+
+
+See PRODUCT.md (register: product; two equal-weight users — homeowners and majstori; "Trusted Tradesman" personality) and DESIGN.md (Workshop Blue primary, Spark Orange reserved for one CTA per screen, flat-by-default elevation) before making UI changes.
+
