@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Uloga {
+  KLIJENT
+  MAJSTOR
+  ADMIN
+}
+
+enum StatusZahteva {
+  NA_CEKANJU
+  PRIHVACEN
+  ODBIJEN
+  ZAVRSEN
+}
+
+model Korisnik {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  lozinka   String
+  ime       String
+  telefon   String?
+  uloga     Uloga    @default(KLIJENT)
+  kreiranAt DateTime @default(now())
+
+  majstorProfil    MajstorProfil?
+  poslantiZahtevi  Zahtev[]       @relation("KlijentZahtevi")
+  primljeniZahtevi Zahtev[]       @relation("MajstorZahtevi")
+  poslatePoruke    Poruka[]
+  datRecenzije     Recenzija[]    @relation("DatRecenzije")
+  primljenRecenzije Recenzija[]   @relation("PrimljenRecenzije")
+
+  @@map("korisnici")
+}
+
+model MajstorProfil {
+  id           String   @id @default(cuid())
+  korisnikId   String   @unique
+  bio          String?
+  lokacija     String
+  prosecnaOcena Float   @default(0)
+  brojRecenzija Int     @default(0)
+  kreiranAt    DateTime @default(now())
+
+  korisnik    Korisnik          @relation(fields: [korisnikId], references: [id])
+  kategorije  MajstorKategorija[]
+
+  @@map("majstor_profili")
+}
+
+model Kategorija {
+  id   String @id @default(cuid())
+  ime  String @unique
+
+  majstori MajstorKategorija[]
+  zahtevi  Zahtev[]
+
+  @@map("kategorije")
+}
+
+model MajstorKategorija {
+  majstorProfilId String
+  kategorijaId    String
+
+  majstorProfil MajstorProfil @relation(fields: [majstorProfilId], references: [id])
+  kategorija    Kategorija    @relation(fields: [kategorijaId], references: [id])
+
+  @@id([majstorProfilId, kategorijaId])
+  @@map("majstor_kategorije")
+}
+
+model Zahtev {
+  id          String        @id @default(cuid())
+  klijentId   String
+  majstorId   String
+  kategorijaId String
+  opis        String
+  status      StatusZahteva @default(NA_CEKANJU)
+  kreiranAt   DateTime      @default(now())
+  azuriranAt  DateTime      @updatedAt
+
+  klijent   Korisnik   @relation("KlijentZahtevi", fields: [klijentId], references: [id])
+  majstor   Korisnik   @relation("MajstorZahtevi", fields: [majstorId], references: [id])
+  kategorija Kategorija @relation(fields: [kategorijaId], references: [id])
+  poruke    Poruka[]
+  recenzija Recenzija?
+
+  @@map("zahtevi")
+}
+
+model Poruka {
+  id         String   @id @default(cuid())
+  zahtevId   String
+  posiljaoId String
+  sadrzaj    String
+  kreiranAt  DateTime @default(now())
+
+  zahtev   Zahtev   @relation(fields: [zahtevId], references: [id])
+  posiljalac Korisnik @relation(fields: [posiljaoId], references: [id])
+
+  @@map("poruke")
+}
+
+model Recenzija {
+  id         String   @id @default(cuid())
+  klijentId  String
+  majstorId  String
+  zahtevId   String   @unique
+  ocena      Int
+  komentar   String?
+  kreiranAt  DateTime @default(now())
+
+  klijent  Korisnik @relation("DatRecenzije", fields: [klijentId], references: [id])
+  majstor  Korisnik @relation("PrimljenRecenzije", fields: [majstorId], references: [id])
+  zahtev   Zahtev   @relation(fields: [zahtevId], references: [id])
+
+  @@map("recenzije")
+}
