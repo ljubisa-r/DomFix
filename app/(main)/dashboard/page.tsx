@@ -8,21 +8,33 @@ export default async function DashboardStrana() {
   const korisnik = await getCurrentUser();
   if (!korisnik) redirect("/prijava");
 
-  const zahtevi = await prisma.zahtev.findMany({
-    where:
-      korisnik.uloga === "KLIJENT"
-        ? { klijentId: korisnik.id }
-        : korisnik.uloga === "MAJSTOR"
-          ? { majstorId: korisnik.id }
-          : {},
-    include: {
-      klijent: { select: { id: true, ime: true, email: true } },
-      majstor: { select: { id: true, ime: true, email: true } },
-      kategorija: true,
-      recenzija: true,
-    },
-    orderBy: { kreiranAt: "desc" },
-  });
+  const [zahtevi, projekti] = await Promise.all([
+    prisma.zahtev.findMany({
+      where:
+        korisnik.uloga === "KLIJENT"
+          ? { klijentId: korisnik.id }
+          : korisnik.uloga === "MAJSTOR"
+            ? { majstorId: korisnik.id }
+            : {},
+      include: {
+        klijent: { select: { id: true, ime: true, email: true } },
+        majstor: { select: { id: true, ime: true, email: true } },
+        kategorija: true,
+        recenzija: true,
+      },
+      orderBy: { kreiranAt: "desc" },
+    }),
+    korisnik.uloga === "KLIJENT"
+      ? prisma.projekat.findMany({
+          where: { klijentId: korisnik.id },
+          include: {
+            kategorija: true,
+            zahtevi: { select: { id: true } },
+          },
+          orderBy: { kreiranAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const statistika = {
     ukupno: zahtevi.length,
@@ -60,12 +72,20 @@ export default async function DashboardStrana() {
       {/* Brze akcije */}
       <div className="flex flex-wrap gap-3 mb-8">
         {korisnik.uloga === "KLIJENT" && (
-          <Link
-            href="/majstori"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium transition-colors"
-          >
-            Traži majstora
-          </Link>
+          <>
+            <Link
+              href="/projekti/novi"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition-colors"
+            >
+              Opišite novi posao
+            </Link>
+            <Link
+              href="/majstori"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium transition-colors"
+            >
+              Traži majstora
+            </Link>
+          </>
         )}
         {korisnik.uloga === "ADMIN" && (
           <Link
@@ -82,6 +102,49 @@ export default async function DashboardStrana() {
           Moj profil
         </Link>
       </div>
+
+      {/* Moji projekti */}
+      {korisnik.uloga === "KLIJENT" && (
+        <div className="bg-white rounded-xl border border-gray-200 mb-8">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Moji projekti</h2>
+          </div>
+
+          {projekti.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-3" aria-hidden="true">🛠️</div>
+              <p className="text-gray-500">Nemate aktivnih projekata</p>
+              <Link href="/projekti/novi" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
+                Opišite svoj prvi posao
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {projekti.map((p) => (
+                <div key={p.id} className="flex items-center gap-4 px-6 py-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-gray-900 truncate">{p.kategorija.ime}</span>
+                      <span className="text-xs text-gray-500">
+                        {p.zahtevi.length === 0
+                          ? "Nije poslat majstoru"
+                          : `Poslat ${p.zahtevi.length} ${p.zahtevi.length === 1 ? "majstoru" : "majstora"}`}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 truncate">{p.opis}</p>
+                  </div>
+                  <Link
+                    href={`/majstori?kategorija=${p.kategorija.id}&projekat=${p.id}`}
+                    className="text-blue-600 hover:underline text-sm font-medium whitespace-nowrap"
+                  >
+                    Pošalji majstoru
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Lista zahteva */}
       <div className="bg-white rounded-xl border border-gray-200">

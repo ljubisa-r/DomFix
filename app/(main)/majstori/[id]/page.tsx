@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, FormEvent } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
 
 interface Korisnik {
@@ -45,13 +45,30 @@ interface TrenutniKorisnik {
   uloga: string;
 }
 
+interface Projekat {
+  id: string;
+  opis: string;
+  kategorija: Kategorija;
+}
+
 export default function MajstorProfilStrana() {
+  return (
+    <Suspense>
+      <MajstorProfilSadrzaj />
+    </Suspense>
+  );
+}
+
+function MajstorProfilSadrzaj() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projekatId = searchParams.get("projekat") ?? "";
   const [majstor, setMajstor] = useState<MajstorDetalji | null>(null);
   const [recenzije, setRecenzije] = useState<Recenzija[]>([]);
   const [trenutniKorisnik, setTrenutniKorisnik] = useState<TrenutniKorisnik | null>(null);
   const [kategorije, setKategorije] = useState<Kategorija[]>([]);
+  const [projekat, setProjekat] = useState<Projekat | null>(null);
   const [modalOtvoren, setModalOtvoren] = useState(false);
   const [odabranaKat, setOdabranaKat] = useState("");
   const [opis, setOpis] = useState("");
@@ -76,6 +93,18 @@ export default function MajstorProfilStrana() {
       .then((d) => setKategorije(d.kategorije ?? []));
   }, [id]);
 
+  useEffect(() => {
+    if (!projekatId) return;
+    fetch(`/api/projekti/${projekatId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d?.projekat) return;
+        setProjekat(d.projekat);
+        setOdabranaKat(d.projekat.kategorija.id);
+        setOpis(d.projekat.opis);
+      });
+  }, [projekatId]);
+
   async function posaljiZahtev(e: FormEvent) {
     e.preventDefault();
     if (!trenutniKorisnik) { router.push("/prijava"); return; }
@@ -84,7 +113,12 @@ export default function MajstorProfilStrana() {
     const res = await fetch("/api/zahtevi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ majstorId: id, kategorijaId: odabranaKat, opis }),
+      body: JSON.stringify({
+        majstorId: id,
+        kategorijaId: odabranaKat,
+        opis,
+        projekatId: projekat?.id,
+      }),
     });
     const data = await res.json();
 
@@ -92,7 +126,7 @@ export default function MajstorProfilStrana() {
     else {
       setUspeh("Zahtev je uspešno poslat!");
       setModalOtvoren(false);
-      setOpis(""); setOdabranaKat("");
+      if (!projekat) { setOpis(""); setOdabranaKat(""); }
     }
     setPosiljanje(false);
   }
@@ -166,7 +200,7 @@ export default function MajstorProfilStrana() {
                 onClick={() => setModalOtvoren(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors whitespace-nowrap"
               >
-                Pošalji zahtev
+                {projekat ? "Pošalji svoj projekat" : "Pošalji zahtev"}
               </button>
             )}
             {!trenutniKorisnik && (
@@ -226,9 +260,14 @@ export default function MajstorProfilStrana() {
       {modalOtvoren && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold text-gray-900 mb-5">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
               Zahtev za {majstor.ime}
             </h3>
+            {projekat && (
+              <p className="text-sm text-gray-500 mb-5">
+                Popunjeno iz vašeg projekta — možete izmeniti pre slanja.
+              </p>
+            )}
 
             <form onSubmit={posaljiZahtev} className="flex flex-col gap-4">
               <div>

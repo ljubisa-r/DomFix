@@ -36,12 +36,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { majstorId, kategorijaId, opis } = await req.json();
+  const { majstorId, kategorijaId, opis, projekatId } = await req.json();
   if (!majstorId || !kategorijaId || !opis) {
     return NextResponse.json(
       { greska: "Sva polja su obavezna" },
       { status: 400 }
     );
+  }
+
+  if (projekatId) {
+    const projekat = await prisma.projekat.findUnique({ where: { id: projekatId } });
+    if (!projekat || projekat.klijentId !== korisnik.id) {
+      return NextResponse.json(
+        { greska: "Projekat nije pronađen" },
+        { status: 400 }
+      );
+    }
   }
 
   const zahtev = await prisma.zahtev.create({
@@ -50,6 +60,7 @@ export async function POST(req: NextRequest) {
       majstorId,
       kategorijaId,
       opis,
+      projekatId: projekatId || null,
     },
     include: {
       klijent: { select: { id: true, ime: true } },

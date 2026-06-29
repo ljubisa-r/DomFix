@@ -20,6 +20,12 @@ interface Majstor {
   kategorije: { kategorija: Kategorija }[];
 }
 
+interface Projekat {
+  id: string;
+  opis: string;
+  kategorija: Kategorija;
+}
+
 export default function MajstoriStrana() {
   return (
     <Suspense>
@@ -30,8 +36,10 @@ export default function MajstoriStrana() {
 
 function MajstoriSadrzaj() {
   const searchParams = useSearchParams();
+  const projekatId = searchParams.get("projekat") ?? "";
   const [majstori, setMajstori] = useState<Majstor[]>([]);
   const [kategorije, setKategorije] = useState<Kategorija[]>([]);
+  const [projekat, setProjekat] = useState<Projekat | null>(null);
   const [pretraga, setPretraga] = useState(searchParams.get("pretraga") ?? "");
   const [odabranaKat, setOdabranaKat] = useState(searchParams.get("kategorija") ?? "");
   const [lokacija, setLokacija] = useState(searchParams.get("lokacija") ?? "");
@@ -42,6 +50,13 @@ function MajstoriSadrzaj() {
       .then((r) => r.json())
       .then((d) => setKategorije(d.kategorije ?? []));
   }, []);
+
+  useEffect(() => {
+    if (!projekatId) { setProjekat(null); return; }
+    fetch(`/api/projekti/${projekatId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setProjekat(d?.projekat ?? null));
+  }, [projekatId]);
 
   const pretraziMajstore = useCallback(async () => {
     setUcitava(true);
@@ -66,6 +81,18 @@ function MajstoriSadrzaj() {
       <p className="text-gray-500 mb-8">
         {majstori.length > 0 ? `${majstori.length} majstora pronađeno` : "Pretraži dostupne majstore"}
       </p>
+
+      {projekat && (
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full shrink-0">
+            Aktivan projekat
+          </span>
+          <p className="text-sm text-gray-700 line-clamp-1">{projekat.opis}</p>
+          <span className="text-sm text-gray-400 sm:ml-auto shrink-0">
+            Izaberite majstora kome ćete ga poslati
+          </span>
+        </div>
+      )}
 
       {/* Filteri */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-8 flex flex-col md:flex-row gap-4">
@@ -118,7 +145,7 @@ function MajstoriSadrzaj() {
           {majstori.map((m) => (
             <Link
               key={m.id}
-              href={`/majstori/${m.korisnik.id}`}
+              href={projekat ? `/majstori/${m.korisnik.id}?projekat=${projekat.id}` : `/majstori/${m.korisnik.id}`}
               className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-blue-200 transition-all"
             >
               <div className="flex items-start gap-4 mb-4">

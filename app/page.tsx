@@ -79,16 +79,16 @@ export default async function PocetnaStrana() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/majstori"
+              href="/projekti/novi"
               className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors"
             >
-              Traži majstora
+              Opišite svoj posao
             </Link>
             <Link
-              href="/registracija"
+              href="/majstori"
               className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors border border-white/40"
             >
-              Postani majstor
+              Pregledaj majstore
             </Link>
           </div>
         </div>
