@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { kategorijaId, opis, lokacija } = await req.json();
+  const { kategorijaId, opis, lokacija, zeljeniRok } = await req.json();
   if (!kategorijaId || !opis) {
     return NextResponse.json(
       { greska: "Kategorija i opis su obavezni" },
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       kategorijaId,
       opis,
       lokacija: lokacija || null,
+      zeljeniRok: zeljeniRok || null,
     },
     include: { kategorija: true },
   });

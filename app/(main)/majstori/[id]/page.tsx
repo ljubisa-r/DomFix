@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect, FormEvent } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
+import ReferencaKarta from "@/components/ReferencaKarta";
+import { ROK_OPCIJE } from "@/lib/rokovi";
 
 interface Korisnik {
   id: string;
@@ -16,12 +18,20 @@ interface Kategorija {
   ime: string;
 }
 
+interface Referenca {
+  id: string;
+  naslov: string;
+  opis: string;
+  slike: string[];
+}
+
 interface MajstorProfil {
   bio: string | null;
   lokacija: string;
   prosecnaOcena: number;
   brojRecenzija: number;
   kategorije: { kategorija: Kategorija }[];
+  reference: Referenca[];
 }
 
 interface MajstorDetalji {
@@ -48,6 +58,7 @@ interface TrenutniKorisnik {
 interface Projekat {
   id: string;
   opis: string;
+  zeljeniRok: string | null;
   kategorija: Kategorija;
 }
 
@@ -72,6 +83,7 @@ function MajstorProfilSadrzaj() {
   const [modalOtvoren, setModalOtvoren] = useState(false);
   const [odabranaKat, setOdabranaKat] = useState("");
   const [opis, setOpis] = useState("");
+  const [zeljeniRok, setZeljeniRok] = useState("");
   const [posiljanje, setPosiljanje] = useState(false);
   const [greska, setGreska] = useState("");
   const [uspeh, setUspeh] = useState("");
@@ -102,6 +114,7 @@ function MajstorProfilSadrzaj() {
         setProjekat(d.projekat);
         setOdabranaKat(d.projekat.kategorija.id);
         setOpis(d.projekat.opis);
+        setZeljeniRok(d.projekat.zeljeniRok ?? "");
       });
   }, [projekatId]);
 
@@ -117,6 +130,7 @@ function MajstorProfilSadrzaj() {
         majstorId: id,
         kategorijaId: odabranaKat,
         opis,
+        zeljeniRok: zeljeniRok || undefined,
         projekatId: projekat?.id,
       }),
     });
@@ -126,7 +140,7 @@ function MajstorProfilSadrzaj() {
     else {
       setUspeh("Zahtev je uspešno poslat!");
       setModalOtvoren(false);
-      if (!projekat) { setOpis(""); setOdabranaKat(""); }
+      if (!projekat) { setOpis(""); setOdabranaKat(""); setZeljeniRok(""); }
     }
     setPosiljanje(false);
   }
@@ -223,6 +237,20 @@ function MajstorProfilSadrzaj() {
         </div>
       </div>
 
+      {/* Radovi */}
+      {profil.reference.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-5">
+            Radovi ({profil.reference.length})
+          </h2>
+          <div className="flex flex-col gap-3">
+            {profil.reference.map((r) => (
+              <ReferencaKarta key={r.id} referenca={r} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recenzije */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-5">
@@ -242,7 +270,7 @@ function MajstorProfilSadrzaj() {
                   <div>
                     <p className="font-medium text-gray-900 text-sm">{r.klijent.ime}</p>
                     <p className="text-xs text-gray-400">
-                      {new Date(r.kreiranAt).toLocaleDateString("sr-RS")}
+                      {new Date(r.kreiranAt).toLocaleDateString("sr-Latn-RS")}
                     </p>
                   </div>
                   <div className="ml-auto">
@@ -301,6 +329,24 @@ function MajstorProfilSadrzaj() {
                   rows={4}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Željeni rok realizacije <span className="text-gray-400 font-normal">(opciono)</span>
+                </label>
+                <select
+                  value={zeljeniRok}
+                  onChange={(e) => setZeljeniRok(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">Nije bitno, izaberite ako znate</option>
+                  {ROK_OPCIJE.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {greska && (

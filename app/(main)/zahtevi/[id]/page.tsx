@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useParams } from "next/navigation";
+import { srLatn } from "date-fns/locale";
 import StatusBedz from "@/components/StatusBedz";
+import RokBedz from "@/components/RokBedz";
+import TerminBedz from "@/components/TerminBedz";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Korisnik {
   id: string;
@@ -21,6 +30,8 @@ interface Poruka {
 interface Zahtev {
   id: string;
   opis: string;
+  zeljeniRok: string | null;
+  terminDolaska: string | null;
   status: string;
   kreiranAt: string;
   kategorija: { ime: string };
@@ -41,6 +52,9 @@ export default function ZahtevDetalj() {
   const [saljeRecenziju, setSaljeRecenziju] = useState(false);
   const [azuriraStatus, setAzuriraStatus] = useState(false);
   const [greska, setGreska] = useState("");
+  const [terminPopoverOtvoren, setTerminPopoverOtvoren] = useState(false);
+  const [odabraniDatum, setOdabraniDatum] = useState<Date | undefined>();
+  const [odabranoVreme, setOdabranoVreme] = useState("");
   const porukeDno = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,15 +90,30 @@ export default function ZahtevDetalj() {
     setSaljePoruku(false);
   }
 
-  async function promeniStatus(noviStatus: string) {
+  async function promeniStatus(noviStatus: string, terminDolaska?: Date) {
     setAzuriraStatus(true);
     await fetch(`/api/zahtevi/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: noviStatus }),
+      body: JSON.stringify({
+        status: noviStatus,
+        terminDolaska: terminDolaska?.toISOString(),
+      }),
     });
     await ucitajZahtev();
     setAzuriraStatus(false);
+  }
+
+  function potvrdiPrihvatanje() {
+    if (!odabraniDatum || !odabranoVreme) return;
+    const [sati, minuti] = odabranoVreme.split(":").map(Number);
+    const termin = new Date(odabraniDatum);
+    termin.setHours(sati, minuti, 0, 0);
+
+    promeniStatus("PRIHVACEN", termin);
+    setTerminPopoverOtvoren(false);
+    setOdabraniDatum(undefined);
+    setOdabranoVreme("");
   }
 
   async function posaljiRecenziju(e: FormEvent) {
@@ -119,15 +148,22 @@ export default function ZahtevDetalj() {
           <div>
             <h1 className="text-xl font-bold text-gray-900 mb-1">{zahtev.kategorija.ime}</h1>
             <p className="text-gray-500 text-sm">
-              {new Date(zahtev.kreiranAt).toLocaleDateString("sr-RS", { year: "numeric", month: "long", day: "numeric" })}
+              {new Date(zahtev.kreiranAt).toLocaleDateString("sr-Latn-RS", { year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
           <StatusBedz status={zahtev.status} />
         </div>
 
-        <p className="text-gray-700 mb-5 leading-relaxed">{zahtev.opis}</p>
+        <p className="text-gray-700 leading-relaxed">{zahtev.opis}</p>
 
-        <div className="grid md:grid-cols-2 gap-4 text-sm">
+        {(zahtev.zeljeniRok || zahtev.terminDolaska) && (
+          <div className="mt-3 mb-2 flex flex-wrap items-center gap-2">
+            <RokBedz rok={zahtev.zeljeniRok} />
+            <TerminBedz termin={zahtev.terminDolaska} />
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-4 text-sm mt-3">
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-gray-500 mb-0.5">Klijent</p>
             <p className="font-medium text-gray-900">{zahtev.klijent.ime}</p>
@@ -143,13 +179,53 @@ export default function ZahtevDetalj() {
         {/* Dugmad za akcije */}
         {jeMajstor && zahtev.status === "NA_CEKANJU" && (
           <div className="flex gap-3 mt-5">
-            <button
-              onClick={() => promeniStatus("PRIHVACEN")}
-              disabled={azuriraStatus}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
-            >
-              Prihvati zahtev
-            </button>
+            <Popover open={terminPopoverOtvoren} onOpenChange={setTerminPopoverOtvoren}>
+              <PopoverTrigger asChild>
+                <button
+                  disabled={azuriraStatus}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+                >
+                  Prihvati zahtev
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4" align="start">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p className="font-medium text-foreground text-sm">Termin dolaska</p>
+                    <p className="text-muted-foreground text-xs">
+                      Izaberite datum i vreme kada planirate da dođete.
+                    </p>
+                  </div>
+                  <Calendar
+                    mode="single"
+                    locale={srLatn}
+                    selected={odabraniDatum}
+                    onSelect={setOdabraniDatum}
+                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                    className="p-0"
+                  />
+                  <div>
+                    <label htmlFor="vremeTermina" className="block text-sm font-medium text-foreground mb-1">
+                      Vreme
+                    </label>
+                    <input
+                      id="vremeTermina"
+                      type="time"
+                      value={odabranoVreme}
+                      onChange={(e) => setOdabranoVreme(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    onClick={potvrdiPrihvatanje}
+                    disabled={!odabraniDatum || !odabranoVreme || azuriraStatus}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white py-2.5 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Potvrdi prihvatanje
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
             <button
               onClick={() => promeniStatus("ODBIJEN")}
               disabled={azuriraStatus}
@@ -199,7 +275,7 @@ export default function ZahtevDetalj() {
                   </div>
                   <div className="text-xs text-gray-400 mt-1 px-1">
                     {!jaPosiljalac && <span className="font-medium">{p.posiljalac.ime} · </span>}
-                    {new Date(p.kreiranAt).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(p.kreiranAt).toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" })}
                   </div>
                 </div>
               );

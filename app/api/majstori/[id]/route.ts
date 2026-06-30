@@ -18,6 +18,7 @@ export async function GET(
       majstorProfil: {
         include: {
           kategorije: { include: { kategorija: true } },
+          reference: { orderBy: { kreiranAt: "desc" } },
         },
       },
     },

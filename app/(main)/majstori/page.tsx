@@ -4,10 +4,25 @@ import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
+import RadoviTraka from "@/components/RadoviTraka";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Kategorija {
   id: string;
   ime: string;
+}
+
+interface Referenca {
+  id: string;
+  naslov: string;
+  opis: string;
+  slike: string[];
 }
 
 interface Majstor {
@@ -18,6 +33,12 @@ interface Majstor {
   bio: string | null;
   korisnik: { id: string; ime: string; email: string };
   kategorije: { kategorija: Kategorija }[];
+  reference: Referenca[];
+}
+
+interface OtvorenRad {
+  majstorIme: string;
+  referenca: Referenca;
 }
 
 interface Projekat {
@@ -44,6 +65,7 @@ function MajstoriSadrzaj() {
   const [odabranaKat, setOdabranaKat] = useState(searchParams.get("kategorija") ?? "");
   const [lokacija, setLokacija] = useState(searchParams.get("lokacija") ?? "");
   const [ucitava, setUcitava] = useState(false);
+  const [otvorenRad, setOtvorenRad] = useState<OtvorenRad | null>(null);
 
   useEffect(() => {
     fetch("/api/kategorije")
@@ -143,58 +165,98 @@ function MajstoriSadrzaj() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {majstori.map((m) => (
-            <Link
+            <div
               key={m.id}
-              href={projekat ? `/majstori/${m.korisnik.id}?projekat=${projekat.id}` : `/majstori/${m.korisnik.id}`}
-              className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-blue-200 transition-all"
+              className="bg-white rounded-xl border border-gray-200 hover:shadow-md hover:border-blue-200 transition-all"
             >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">
-                  {m.korisnik.ime[0].toUpperCase()}
+              <Link
+                href={projekat ? `/majstori/${m.korisnik.id}?projekat=${projekat.id}` : `/majstori/${m.korisnik.id}`}
+                className="block p-5"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xl font-bold shrink-0">
+                    {m.korisnik.ime[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">{m.korisnik.ime}</h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <span>📍</span> {m.lokacija}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{m.korisnik.ime}</h3>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <span>📍</span> {m.lokacija}
-                  </p>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <OcenaZvezdice ocena={Math.round(m.prosecnaOcena)} velicina="sm" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {m.prosecnaOcena.toFixed(1)}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    ({m.brojRecenzija} {m.brojRecenzija === 1 ? "recenzija" : "recenzija"})
+                  </span>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 mb-3">
-                <OcenaZvezdice ocena={Math.round(m.prosecnaOcena)} velicina="sm" />
-                <span className="text-sm font-medium text-gray-700">
-                  {m.prosecnaOcena.toFixed(1)}
-                </span>
-                <span className="text-sm text-gray-400">
-                  ({m.brojRecenzija} {m.brojRecenzija === 1 ? "recenzija" : "recenzija"})
-                </span>
-              </div>
+                {m.bio && (
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{m.bio}</p>
+                )}
 
-              {m.bio && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{m.bio}</p>
+                {m.kategorije.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {m.kategorije.slice(0, 3).map(({ kategorija }) => (
+                      <span
+                        key={kategorija.id}
+                        className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-medium"
+                      >
+                        {kategorija.ime}
+                      </span>
+                    ))}
+                    {m.kategorije.length > 3 && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
+                        +{m.kategorije.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </Link>
+
+              {m.reference.length > 0 && (
+                <div className="px-5 pb-5">
+                  <RadoviTraka
+                    radovi={m.reference}
+                    onOtvori={(referenca) => setOtvorenRad({ majstorIme: m.korisnik.ime, referenca })}
+                  />
+                </div>
               )}
-
-              {m.kategorije.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {m.kategorije.slice(0, 3).map(({ kategorija }) => (
-                    <span
-                      key={kategorija.id}
-                      className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-medium"
-                    >
-                      {kategorija.ime}
-                    </span>
-                  ))}
-                  {m.kategorije.length > 3 && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
-                      +{m.kategorije.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
-            </Link>
+            </div>
           ))}
         </div>
       )}
+
+      <Dialog open={!!otvorenRad} onOpenChange={(otvoren) => !otvoren && setOtvorenRad(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          {otvorenRad && (
+            <>
+              <DialogHeader>
+                <p className="text-sm text-gray-500">Rad majstora {otvorenRad.majstorIme}</p>
+                <DialogTitle>{otvorenRad.referenca.naslov}</DialogTitle>
+                <DialogDescription className="text-gray-700">
+                  {otvorenRad.referenca.opis}
+                </DialogDescription>
+              </DialogHeader>
+              <div className={`grid gap-2 ${otvorenRad.referenca.slike.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                {otvorenRad.referenca.slike.map((slika, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={slika}
+                    src={slika}
+                    alt={`${otvorenRad.referenca.naslov} — slika ${i + 1}`}
+                    className="w-full rounded-lg object-cover aspect-square border border-gray-200"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

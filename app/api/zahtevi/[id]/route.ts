@@ -60,7 +60,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { status } = await req.json();
+  const { status, terminDolaska } = await req.json();
 
   const zahtev = await prisma.zahtev.findUnique({ where: { id } });
   if (!zahtev) {
@@ -79,7 +79,10 @@ export async function PATCH(
 
   const azuriran = await prisma.zahtev.update({
     where: { id },
-    data: { status },
+    data: {
+      status,
+      ...(terminDolaska ? { terminDolaska: new Date(terminDolaska) } : {}),
+    },
   });
 
   return NextResponse.json({ zahtev: azuriran });

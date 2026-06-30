@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { majstorId, kategorijaId, opis, projekatId } = await req.json();
+  const { majstorId, kategorijaId, opis, projekatId, zeljeniRok } = await req.json();
   if (!majstorId || !kategorijaId || !opis) {
     return NextResponse.json(
       { greska: "Sva polja su obavezna" },
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       kategorijaId,
       opis,
       projekatId: projekatId || null,
+      zeljeniRok: zeljeniRok || null,
     },
     include: {
       klijent: { select: { id: true, ime: true } },

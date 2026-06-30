@@ -65,7 +65,7 @@ export default function AdminRazgovorStrana() {
           <div>
             <h1 className="text-xl font-bold text-gray-900 mb-1">{zahtev.kategorija.ime}</h1>
             <p className="text-gray-500 text-sm">
-              Kreiran: {new Date(zahtev.kreiranAt).toLocaleDateString("sr-RS", { year: "numeric", month: "long", day: "numeric" })}
+              Kreiran: {new Date(zahtev.kreiranAt).toLocaleDateString("sr-Latn-RS", { year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
           <StatusBedz status={zahtev.status} />
@@ -130,7 +130,7 @@ export default function AdminRazgovorStrana() {
                     <div className={`text-xs text-gray-400 mt-1 px-1 ${jeKlijent ? "" : "text-right"}`}>
                       <span className="font-medium">{p.posiljalac.ime}</span>
                       {" · "}
-                      {new Date(p.kreiranAt).toLocaleString("sr-RS", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(p.kreiranAt).toLocaleString("sr-Latn-RS", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                 </div>

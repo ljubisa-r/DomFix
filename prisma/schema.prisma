@@ -20,6 +20,13 @@ enum StatusZahteva {
   ZAVRSEN
 }
 
+enum ZeljeniRok {
+  HITNO
+  NEDELJA_DANA
+  MESEC_DANA
+  FLEKSIBILNO
+}
+
 model Korisnik {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -51,8 +58,22 @@ model MajstorProfil {
 
   korisnik   Korisnik            @relation(fields: [korisnikId], references: [id])
   kategorije MajstorKategorija[]
+  reference  Referenca[]
 
   @@map("majstor_profili")
+}
+
+model Referenca {
+  id              String   @id @default(cuid())
+  majstorProfilId String
+  naslov          String
+  opis            String
+  slike           String[]
+  kreiranAt       DateTime @default(now())
+
+  majstorProfil MajstorProfil @relation(fields: [majstorProfilId], references: [id])
+
+  @@map("reference")
 }
 
 model Kategorija {
@@ -67,12 +88,13 @@ model Kategorija {
 }
 
 model Projekat {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   klijentId    String
   kategorijaId String
   opis         String
   lokacija     String?
-  kreiranAt    DateTime @default(now())
+  zeljeniRok   ZeljeniRok?
+  kreiranAt    DateTime    @default(now())
 
   klijent    Korisnik   @relation(fields: [klijentId], references: [id])
   kategorija Kategorija @relation(fields: [kategorijaId], references: [id])
@@ -93,15 +115,17 @@ model MajstorKategorija {
 }
 
 model Zahtev {
-  id           String        @id @default(cuid())
-  klijentId    String
-  majstorId    String
-  kategorijaId String
-  projekatId   String?
-  opis         String
-  status       StatusZahteva @default(NA_CEKANJU)
-  kreiranAt    DateTime      @default(now())
-  azuriranAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  klijentId     String
+  majstorId     String
+  kategorijaId  String
+  projekatId    String?
+  opis          String
+  zeljeniRok    ZeljeniRok?
+  terminDolaska DateTime?
+  status        StatusZahteva @default(NA_CEKANJU)
+  kreiranAt     DateTime      @default(now())
+  azuriranAt    DateTime      @updatedAt
 
   klijent    Korisnik   @relation("KlijentZahtevi", fields: [klijentId], references: [id])
   majstor    Korisnik   @relation("MajstorZahtevi", fields: [majstorId], references: [id])

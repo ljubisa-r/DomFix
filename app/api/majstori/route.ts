@@ -34,6 +34,9 @@ export async function GET(req: NextRequest) {
       kategorije: {
         include: { kategorija: true },
       },
+      reference: {
+        orderBy: { kreiranAt: "desc" },
+      },
     },
     orderBy: { prosecnaOcena: "desc" },
   });

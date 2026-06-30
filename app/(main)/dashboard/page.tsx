@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import StatusBedz from "@/components/StatusBedz";
+import RokBedz from "@/components/RokBedz";
+import TerminBedz from "@/components/TerminBedz";
 
 export default async function DashboardStrana() {
   const korisnik = await getCurrentUser();
@@ -130,6 +132,7 @@ export default async function DashboardStrana() {
                           ? "Nije poslat majstoru"
                           : `Poslat ${p.zahtevi.length} ${p.zahtevi.length === 1 ? "majstoru" : "majstora"}`}
                       </span>
+                      <RokBedz rok={p.zeljeniRok} />
                     </div>
                     <p className="text-sm text-gray-500 truncate">{p.opis}</p>
                   </div>
@@ -173,17 +176,19 @@ export default async function DashboardStrana() {
                 className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="font-medium text-gray-900 truncate">
                       {z.kategorija.ime}
                     </span>
                     <StatusBedz status={z.status} />
+                    <RokBedz rok={z.zeljeniRok} />
+                    <TerminBedz termin={z.terminDolaska} />
                   </div>
                   <p className="text-sm text-gray-500 truncate mb-1">{z.opis}</p>
                   <p className="text-xs text-gray-500">
                     {korisnik.uloga === "MAJSTOR" ? `Klijent: ${z.klijent.ime}` : `Majstor: ${z.majstor.ime}`}
                     {" · "}
-                    {z.kreiranAt.toLocaleDateString("sr-RS")}
+                    {z.kreiranAt.toLocaleDateString("sr-Latn-RS")}
                   </p>
                 </div>
                 <div className="text-gray-500 text-sm" aria-hidden="true">→</div>

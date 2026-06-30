@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ROK_OPCIJE } from "@/lib/rokovi";
 
 interface Kategorija {
   id: string;
@@ -22,6 +23,7 @@ export default function NoviProjekatStrana() {
   const [kategorijaId, setKategorijaId] = useState("");
   const [opis, setOpis] = useState("");
   const [lokacija, setLokacija] = useState("");
+  const [zeljeniRok, setZeljeniRok] = useState("");
   const [greska, setGreska] = useState("");
   const [salje, setSalje] = useState(false);
 
@@ -47,7 +49,7 @@ export default function NoviProjekatStrana() {
       const res = await fetch("/api/projekti", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kategorijaId, opis, lokacija }),
+        body: JSON.stringify({ kategorijaId, opis, lokacija, zeljeniRok: zeljeniRok || undefined }),
       });
       const data = await res.json();
 
@@ -151,6 +153,28 @@ export default function NoviProjekatStrana() {
               rows={5}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+          </div>
+
+          <div>
+            <label htmlFor="zeljeniRok" className="block text-sm font-medium text-gray-700 mb-1">
+              Željeni rok realizacije <span className="text-gray-400 font-normal">(opciono)</span>
+            </label>
+            <select
+              id="zeljeniRok"
+              value={zeljeniRok}
+              onChange={(e) => setZeljeniRok(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Nije bitno, izaberite ako znate</option>
+              {ROK_OPCIJE.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-400 mt-1">
+              Pomaže majstoru da proceni da li može da stigne u tom roku.
+            </p>
           </div>
 
           <div>

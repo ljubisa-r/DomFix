@@ -132,7 +132,7 @@ export default function AdminStrana() {
                       {z._count.poruke} {z._count.poruke === 1 ? "poruka" : "poruka"}
                     </td>
                     <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">
-                      {new Date(z.kreiranAt).toLocaleDateString("sr-RS")}
+                      {new Date(z.kreiranAt).toLocaleDateString("sr-Latn-RS")}
                     </td>
                     <td className="px-5 py-3.5">
                       <Link
