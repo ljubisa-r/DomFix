@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Pencil } from "lucide-react";
 import OcenaZvezdice from "@/components/OcenaZvezdice";
 import ReferencaKarta from "@/components/ReferencaKarta";
+import UrediProfilForma, { type ProfilZaEdit } from "@/components/UrediProfilForma";
 
 interface Referenca {
   id: string;
@@ -27,6 +28,8 @@ interface KorisnikProfil {
     brojRecenzija: number;
     kategorije: { kategorija: { id: string; ime: string } }[];
     reference: Referenca[];
+    cenaAngazmana: number | null;
+    jedinicaCene: string | null;
   } | null;
 }
 
@@ -34,6 +37,7 @@ const MAX_SLIKA = 6;
 
 export default function ProfilStrana() {
   const [korisnik, setKorisnik] = useState<KorisnikProfil | null>(null);
+  const [urediProfilOtvoren, setUrediProfilOtvoren] = useState(false);
   const [formaOtvorena, setFormaOtvorena] = useState(false);
   const [naslov, setNaslov] = useState("");
   const [opis, setOpis] = useState("");
@@ -108,6 +112,15 @@ export default function ProfilStrana() {
     zatvoriFormu();
   }
 
+  function profilSacuvan(novePodatke: ProfilZaEdit) {
+    setKorisnik((k) =>
+      k && k.majstorProfil
+        ? { ...k, majstorProfil: { ...k.majstorProfil, ...novePodatke } }
+        : k
+    );
+    setUrediProfilOtvoren(false);
+  }
+
   async function obrisiReferencu(id: string) {
     setKorisnik((k) =>
       k && k.majstorProfil
@@ -158,46 +171,78 @@ export default function ProfilStrana() {
       </div>
 
       {korisnik.majstorProfil && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Profil majstora</h3>
-
-          <div className="flex items-center gap-3 mb-4">
-            <OcenaZvezdice ocena={Math.round(korisnik.majstorProfil.prosecnaOcena)} velicina="md" />
-            <span className="font-semibold text-gray-800">
-              {korisnik.majstorProfil.prosecnaOcena.toFixed(1)}
-            </span>
-            <span className="text-gray-400 text-sm">
-              ({korisnik.majstorProfil.brojRecenzija} recenzija)
-            </span>
+        <div className={`bg-white rounded-xl border p-6 ${urediProfilOtvoren ? "border-blue-200" : "border-gray-200"}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">
+              {urediProfilOtvoren ? "Uredi profil" : "Profil majstora"}
+            </h3>
+            {!urediProfilOtvoren && (
+              <button
+                onClick={() => setUrediProfilOtvoren(true)}
+                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                <Pencil className="size-3.5" />
+                Uredi profil
+              </button>
+            )}
           </div>
 
-          <div className="grid gap-3 text-sm mb-4">
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-500">Lokacija</span>
-              <span className="font-medium text-gray-900">{korisnik.majstorProfil.lokacija}</span>
-            </div>
-          </div>
-
-          {korisnik.majstorProfil.bio && (
-            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 mb-4">
-              {korisnik.majstorProfil.bio}
-            </div>
-          )}
-
-          {korisnik.majstorProfil.kategorije.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-500 mb-2">Kategorije</p>
-              <div className="flex flex-wrap gap-2">
-                {korisnik.majstorProfil.kategorije.map(({ kategorija }) => (
-                  <span
-                    key={kategorija.id}
-                    className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full"
-                  >
-                    {kategorija.ime}
-                  </span>
-                ))}
+          {urediProfilOtvoren ? (
+            <UrediProfilForma
+              profil={korisnik.majstorProfil}
+              onSacuvano={profilSacuvan}
+              onOtkazi={() => setUrediProfilOtvoren(false)}
+            />
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <OcenaZvezdice ocena={Math.round(korisnik.majstorProfil.prosecnaOcena)} velicina="md" />
+                <span className="font-semibold text-gray-800">
+                  {korisnik.majstorProfil.prosecnaOcena.toFixed(1)}
+                </span>
+                <span className="text-gray-400 text-sm">
+                  ({korisnik.majstorProfil.brojRecenzija} recenzija)
+                </span>
               </div>
-            </div>
+
+              <div className="grid gap-0 text-sm mb-4">
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Lokacija</span>
+                  <span className="font-medium text-gray-900">{korisnik.majstorProfil.lokacija}</span>
+                </div>
+                {korisnik.majstorProfil.cenaAngazmana != null && (
+                  <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-500">Cena angažmana</span>
+                    <span className="font-medium text-gray-900">
+                      {korisnik.majstorProfil.cenaAngazmana.toLocaleString("sr-RS")} din
+                      {korisnik.majstorProfil.jedinicaCene === "SAT" ? "/sat" : "/dan"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {korisnik.majstorProfil.bio && (
+                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 mb-4">
+                  {korisnik.majstorProfil.bio}
+                </div>
+              )}
+
+              {korisnik.majstorProfil.kategorije.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Kategorije</p>
+                  <div className="flex flex-wrap gap-2">
+                    {korisnik.majstorProfil.kategorije.map(({ kategorija }) => (
+                      <span
+                        key={kategorija.id}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full"
+                      >
+                        {kategorija.ime}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -271,7 +316,7 @@ export default function ProfilStrana() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 rounded-lg py-4 text-sm text-gray-500 transition-colors"
+                    className="w-full border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 rounded-lg py-4 text-sm text-gray-600 hover:text-blue-700 transition-colors"
                   >
                     Izaberite slike sa uređaja
                   </button>

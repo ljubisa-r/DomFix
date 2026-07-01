@@ -54,6 +54,8 @@ model MajstorProfil {
   lokacija      String
   prosecnaOcena Float    @default(0)
   brojRecenzija Int      @default(0)
+  cenaAngazmana Float?
+  jedinicaCene  String?
   kreiranAt     DateTime @default(now())
 
   korisnik   Korisnik            @relation(fields: [korisnikId], references: [id])
